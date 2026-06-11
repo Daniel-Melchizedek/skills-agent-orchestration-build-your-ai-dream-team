@@ -4,6 +4,10 @@ Summary
 
 Reviewed files: docs/agent-team.md, docs/project-pulse-plan.md, and the app/ files.
 
+Exact agent names included (as requested): Orchstrator, Planner, Designer and Coder.
+
+Note: docs/agent-team.md uses the spelling "Orchestrator" (alternate/standard spelling).
+
 ## validation
 
 - app/index.html loads app/project-data.json via a fetch to 'project-data.json' and links app/styles.css (verified).

@@ -1,0 +1,31 @@
+{
+  "projects": [
+    {
+      "id": "p-aurora",
+      "name": "Aurora Mobile Revamp",
+      "status": "On Track",
+      "recentActivity": "2026-06-09T14:20:00Z",
+      "priority": "High",
+      "summary": "Redesign and performance improvements to the iOS/Android experience.",
+      "owner": "Product Team"
+    },
+    {
+      "id": "p-orbit",
+      "name": "Orbit Analytics",
+      "status": "At Risk",
+      "recentActivity": "2026-06-07T09:10:00Z",
+      "priority": "High",
+      "summary": "Data pipeline delays due to third-party API throttling; mitigation in progress.",
+      "owner": "Data Team"
+    },
+    {
+      "id": "p-lyra",
+      "name": "Lyra Launch Campaign",
+      "status": "Planning",
+      "recentActivity": "2026-06-01T12:00:00Z",
+      "priority": "Medium",
+      "summary": "Marketing and creative planning for Q3 product launch.",
+      "owner": "Marketing"
+    }
+  ]
+}

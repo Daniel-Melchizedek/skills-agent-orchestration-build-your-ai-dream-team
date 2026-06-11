@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Project Pulse</title>
+  <link rel="stylesheet" href="styles.css" />
+  <!-- Minimal comments: accessibility decisions are described in the JS and CSS comments below. -->
+</head>
+<body>
+  <!-- Skip link for keyboard users -->
+  <a class="skip-link" href="#projects-grid">Skip to projects</a>
+
+  <!-- Main dashboard container: deterministic hook .dashboard required by Project Pulse spec -->
+  <main class="dashboard" role="main" aria-labelledby="dashboard-heading">
+    <header class="dashboard-header">
+      <h1 id="dashboard-heading">Project Pulse</h1>
+      <p class="dashboard-subhead">At-a-glance view of active projects, status, recent activity, and priority.</p>
+    </header>
+
+    <!-- Controls / filter area (visual/structural; non-functional placeholder for future) -->
+    <section class="dashboard-controls" aria-hidden="true">
+      <!-- Controls are decorative for this deliverable; they provide a believable dashboard header -->
+      <div class="controls-row">
+        <div class="control-pill">All teams</div>
+        <div class="control-pill">Last 30 days</div>
+      </div>
+    </section>
+
+    <!-- Projects grid: cards are rendered into this element -->
+    <section id="projects-grid" class="projects-grid" aria-live="polite" aria-busy="false">
+      <!-- JS will populate visible project cards here by fetching project-data.json -->
+      <div class="loading">Loading projects…</div>
+    </section>
+
+    <footer class="dashboard-footer" role="contentinfo">
+      <small>Project Pulse • Samples only — data loaded from project-data.json</small>
+    </footer>
+  </main>
+
+  <script>
+  /**
+   * Accessibility notes:
+   * - The page has a single H1 (page landmark) and each project name uses H2 to keep a logical heading hierarchy.
+   * - Cards are focusable (tabindex="0") to allow keyboard users to navigate project cards.
+   * - Each card uses aria-labelledby (project name) and aria-describedby (meta summary) for assistive technologies.
+   * - The projects grid uses aria-live="polite" so screen readers are informed when project content loads.
+   *
+   * Visual/focus: focus styles are implemented in CSS for .project-card:focus to ensure visible keyboard focus.
+   *
+   * Implementation notes:
+   * - Fetches project-data.json (same directory) and expects an object with a `projects` array.
+   * - Each project must have id, name, status, recentActivity (ISO string or readable string), and priority.
+   * - Status classnames are derived from status text (lowercased, spaces -> hyphens).
+   */
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const grid = document.getElementById('projects-grid');
+
+    function formatDate(value) {
+      // If value looks like an ISO date, parse and format to a readable local string.
+      // Fallback: return original string.
+      try {
+        const d = new Date(value);
+        if (isNaN(d)) return value;
+        // short date + short time
+        return d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+      } catch {
+        return value;
+      }
+    }
+
+    function slugifyStatus(status) {
+      return String(status || '').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9\-]/g, '');
+    }
+
+    function createProjectCard(p) {
+      // article with proper semantics
+      const article = document.createElement('article');
+      article.className = 'project-card';
+      article.setAttribute('tabindex', '0'); // make keyboard-focusable
+      article.setAttribute('role', 'group');
+      article.setAttribute('aria-labelledby', `proj-${p.id}-name`);
+      article.setAttribute('aria-describedby', `proj-${p.id}-meta`);
+
+      // Header: title + status badge
+      const header = document.createElement('div');
+      header.className = 'project-card-header';
+
+      const title = document.createElement('h2');
+      title.className = 'project-title';
+      title.id = `proj-${p.id}-name`;
+      title.textContent = p.name || 'Untitled project';
+
+      const statusBadge = document.createElement('span');
+      const statusClass = 'status--' + slugifyStatus(p.status || 'unknown');
+      statusBadge.className = `status-badge ${statusClass}`;
+      statusBadge.setAttribute('aria-hidden', 'true'); // decorative; name announced via meta below
+      statusBadge.textContent = p.status || 'Unknown';
+
+      header.appendChild(title);
+      header.appendChild(statusBadge);
+
+      // Meta: recent activity + priority
+      const meta = document.createElement('div');
+      meta.className = 'project-meta';
+      meta.id = `proj-${p.id}-meta`;
+
+      const recent = document.createElement('div');
+      recent.className = 'project-recent';
+      const recentLabel = document.createElement('span');
+      recentLabel.className = 'meta-label';
+      recentLabel.textContent = 'Recent: ';
+      const recentVal = document.createElement('time');
+      recentVal.className = 'meta-value';
+      // Provide datetime when possible for machine readability
+      try {
+        const dt = new Date(p.recentActivity);
+        if (!isNaN(dt)) recentVal.dateTime = dt.toISOString();
+      } catch {}
+      recentVal.textContent = formatDate(p.recentActivity || 'No recent activity');
+
+      recent.appendChild(recentLabel);
+      recent.appendChild(recentVal);
+
+      const priority = document.createElement('div');
+      priority.className = 'project-priority';
+      const priorityLabel = document.createElement('span');
+      priorityLabel.className = 'meta-label';
+      priorityLabel.textContent = 'Priority: ';
+      const priorityPill = document.createElement('span');
+      priorityPill.className = 'priority-pill priority--' + (String(p.priority || '').toLowerCase());
+      priorityPill.textContent = p.priority || 'Medium';
+      priority.appendChild(priorityLabel);
+      priority.appendChild(priorityPill);
+
+      meta.appendChild(recent);
+      meta.appendChild(priority);
+
+      // Optional: brief summary (if provided)
+      if (p.summary) {
+        const summary = document.createElement('p');
+        summary.className = 'project-summary';
+        summary.textContent = p.summary;
+        article.appendChild(header);
+        article.appendChild(meta);
+        article.appendChild(summary);
+      } else {
+        article.appendChild(header);
+        article.appendChild(meta);
+      }
+
+      // Keyboard interaction hint for screen reader/keyboard users
+      const srHint = document.createElement('span');
+      srHint.className = 'sr-only';
+      srHint.textContent = 'Press Enter to view details';
+      article.appendChild(srHint);
+
+      // Simple keyboard handler: on Enter, toggle an "expanded" visual state (non-navigational).
+      article.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter' || ev.key === ' ') {
+          ev.preventDefault();
+          article.classList.toggle('expanded');
+        }
+      });
+
+      // Return assembled card
+      return article;
+    }
+
+    // Fetch data and render
+    fetch('project-data.json', { cache: 'no-store' })
+      .then((r) => {
+        if (!r.ok) throw new Error('Failed to load project-data.json');
+        return r.json();
+      })
+      .then((data) => {
+        grid.innerHTML = ''; // clear loading
+        const projects = Array.isArray(data.projects) ? data.projects : [];
+        if (projects.length === 0) {
+          grid.innerHTML = '<div class="empty-state">No projects to show.</div>';
+          return;
+        }
+        // Accessibility: indicate loading completed
+        grid.setAttribute('aria-busy', 'false');
+
+        projects.forEach((p) => {
+          // Ensure each project has a string id for stable ids
+          if (!p.id) p.id = Math.random().toString(36).slice(2, 9);
+          const card = createProjectCard(p);
+          grid.appendChild(card);
+        });
+      })
+      .catch((err) => {
+        grid.innerHTML = `<div class="error">Unable to load projects — ${err.message}</div>`;
+        grid.setAttribute('aria-busy', 'false');
+      });
+  });
+  </script>
+</body>
+</html>
